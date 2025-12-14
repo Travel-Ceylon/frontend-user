@@ -1,31 +1,63 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const TaxiFilter = ({ vehicles, onFilterChange }) => {
-  const [filters, setFilters] = useState({
-    priceRange: { min: 0, max: 50 },
-    selectedModels: [],
-    selectedFuelTypes: [],
-    selectedCarTypes: [],
-  });
-
-  const minPrice = Math.min(...vehicles.map((v) => v.feePerKm));
-  const maxPrice = Math.max(...vehicles.map((v) => v.feePerKm));
+  const minPrice = Math.min(...vehicles.map((v) => v.perKm));
+  const maxPrice = Math.max(...vehicles.map((v) => v.perKm));
   const availableModels = [...new Set(vehicles.map((v) => v.model))];
   const availableFuelTypes = [...new Set(vehicles.map((v) => v.fuelType))];
   const availableCarTypes = [
     ...new Set(vehicles.map((v) => v.carType).filter(Boolean)),
   ];
 
+  const [filters, setFilters] = useState({
+    priceRange: { min: minPrice, max: maxPrice },
+    selectedModels: [],
+    selectedFuelTypes: [],
+    selectedCarTypes: [],
+  });
+
+  // Initialize filters with actual min/max prices when component mounts
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      priceRange: { min: minPrice, max: maxPrice },
+    }));
+  }, [minPrice, maxPrice]);
+
   const handlePriceChange = (e, type) => {
+    const value = e.target.value;
+
+    // Allow empty input while typing
+    if (value === "") {
+      setFilters((prev) => ({
+        ...prev,
+        priceRange: {
+          ...prev.priceRange,
+          [type]: type === "min" ? minPrice : maxPrice,
+        },
+      }));
+      return;
+    }
+
+    const numValue = Number(value);
+
+    // Update local state
     const newFilters = {
       ...filters,
       priceRange: {
         ...filters.priceRange,
-        [type]: Number(e.target.value),
+        [type]: numValue,
       },
     };
+
     setFilters(newFilters);
-    onFilterChange(newFilters);
+
+    // Only trigger filter if the range is valid
+    if (type === "min" && numValue <= newFilters.priceRange.max) {
+      onFilterChange(newFilters);
+    } else if (type === "max" && numValue >= newFilters.priceRange.min) {
+      onFilterChange(newFilters);
+    }
   };
 
   const handleCheckboxChange = (type, value) => {
@@ -44,72 +76,51 @@ const TaxiFilter = ({ vehicles, onFilterChange }) => {
   };
 
   return (
-    <div>
+    <div className="">
       <h1 className="text-black text-2xl font-semibold text-left">Filters</h1>
       <div className="w-[80%] h-[1px] bg-gray-300 mt-4"></div>
 
-      {/*Price Filter */}
+      {/*Price filter */}
       <div className="mt-6 mb-4">
-        <h1 className="text-base font-semibold text-left mb-3">Price</h1>
-        <div className="flex gap-4">
+        <h1 className="text-base font-semibold text-left text-gray-900">
+          Price (LKR per km)
+        </h1>
+        <div className="text-[10px] text-gray-500  mb-3">
+          Range: LKR {minPrice.toFixed(2)} - LKR {maxPrice.toFixed(2)}
+        </div>
+        <div className="flex gap-4 sm:gap-0">
           <div className="relative w-full">
             <input
               type="number"
               min={minPrice}
-              max={maxPrice}
+              max={filters.priceRange.max}
               value={filters.priceRange.min}
               onChange={(e) => handlePriceChange(e, "min")}
-              className="w-full p-2 border border-gray-300 rounded text-black pr-8"
+              className="w-full sm:w-2/3 p-2 border border-gray-300 rounded text-black"
               placeholder="Min"
             />
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M7.646 4.646a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8 5.707l-2.646 2.647a.5.5 0 0 1-.708-.708l3-3z"
-                />
-              </svg>
-            </div>
           </div>
           <div className="relative w-full">
             <input
               type="number"
-              min={minPrice}
+              min={filters.priceRange.min}
               max={maxPrice}
               value={filters.priceRange.max}
               onChange={(e) => handlePriceChange(e, "max")}
-              className="w-full p-2 border border-gray-300 rounded text-black pr-8"
+              className="w-full sm:w-2/3 p-2 border border-gray-300 rounded text-black"
               placeholder="Max"
             />
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                fill="currentColor"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M7.646 4.646a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8 5.707l-2.646 2.647a.5.5 0 0 1-.708-.708l3-3z"
-                />
-              </svg>
-            </div>
           </div>
         </div>
       </div>
-      <div className="w-[80%] h-[1px] bg-gray-300 mt-2"></div>
+      <div className="w-[80%] h-px bg-gray-300 mt-2"></div>
 
-      {/* Model Filter */}
+      {/* Model filter */}
       {availableModels.length > 0 && (
         <div className="my-6">
-          <h3 className="font-semibold text-base mb-3 text-left">Model</h3>
+          <h3 className="font-semibold text-base mb-3 text-left text-gray-900">
+            Model
+          </h3>
           <div className="space-y-3">
             {availableModels.map((model) => (
               <div key={model} className="flex items-center">
@@ -122,7 +133,7 @@ const TaxiFilter = ({ vehicles, onFilterChange }) => {
                 />
                 <label
                   htmlFor={`model-${model}`}
-                  className="text-base font-semibold cursor-pointer"
+                  className="text-base font-semibold cursor-pointer text-gray-600"
                 >
                   {model}
                 </label>
@@ -133,7 +144,7 @@ const TaxiFilter = ({ vehicles, onFilterChange }) => {
       )}
       <div className="w-[80%] h-[1px] bg-gray-300"></div>
 
-      {/* Fuel Type Filter */}
+      {/* Fuel type filter */}
       {availableFuelTypes.length > 0 && (
         <div className="my-6">
           <h3 className="font-semibold text-base mb-3 text-left">Fuel Type</h3>
@@ -149,7 +160,7 @@ const TaxiFilter = ({ vehicles, onFilterChange }) => {
                 />
                 <label
                   htmlFor={`fuel-${type}`}
-                  className="text-base font-semibold cursor-pointer"
+                  className="text-base font-semibold cursor-pointer text-gray-600"
                 >
                   {type}
                 </label>
@@ -159,7 +170,7 @@ const TaxiFilter = ({ vehicles, onFilterChange }) => {
         </div>
       )}
 
-      {/* Car Type Filter (only if available) */}
+      {/* Car type filter*/}
       {availableCarTypes.length > 0 && (
         <div className="my-6">
           <h3 className="font-semibold text-base mb-3 text-left">Car Type</h3>
