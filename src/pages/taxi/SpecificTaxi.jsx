@@ -1,54 +1,93 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import StartJourney from "../../components/StartJourney";
 import TestimonialCard from "../../components/TestimonialCard";
-import { useEffect, useState } from "react";
-import { asserts } from "../../assets/assets";
+import { useTaxiStore } from "../../store/taxiStore";
 
 const SpecificTaxi = () => {
-  const setReviewBelongsTo = ()=>{};
-  const toggleReviewOpen = false;
-  const getPlatformReviews = ()=>{};
+  const { vehicleId } = useParams();
+  const navigate = useNavigate();
+  const startJourneyRef = useRef(null);
+  const { availableTaxis } = useTaxiStore();
+  const [vehicle, setVehicle] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [reviews, setReviews] = useState([]);
+  const getPlatformReviews = () => {};
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const data = await getPlatformReviews();
-        console.log(data);
-        setReviews(data);
-      } catch (error) {
-        console.log(error.message);
-      }
-    };
+    // Check if vehicleId exists
+    if (!vehicleId) {
+      console.error("No vehicle ID provided in URL");
+      navigate("/taxi-bookings", { replace: true });
+      return;
+    }
 
-    fetchReviews();
-  }, []); // Empty dependency array
+    // Check if availableTaxis has loaded
+    if (availableTaxis.length === 0) {
+      return;
+    }
 
-  const location = useLocation();
-  const { vehicle } = location.state || {};
+    // Try to find the vehicle
+    const foundVehicle = availableTaxis.find((v) => {
+      const id = v._id || v.id;
+      return id && id.toString() === vehicleId;
+    });
+
+    if (foundVehicle) {
+      setVehicle(foundVehicle);
+      setLoading(false);
+    } else {
+      // Vehicle not found after taxis loaded
+      console.warn(`Vehicle ID ${vehicleId} not found in available taxis.`);
+      navigate("/taxi-bookings", { replace: true });
+    }
+  }, [vehicleId, availableTaxis, navigate]);
+
   if (!vehicle) {
-    return <div>No vehicle found</div>;
+    navigate("/taxi-bookings", { replace: true });
   }
+  if (loading || !vehicle) {
+    return (
+      <div className="relative top-24 w-full text-center p-10">
+        <p className="text-xl font-medium text-gray-700">
+          Loading vehicle details...
+        </p>
+      </div>
+    );
+  }
+
+  // Function to handle scrolling
+  const handleHireNowClick = () => {
+    // Check if the reference exists and has a current element (the div)
+    if (startJourneyRef.current) {
+      startJourneyRef.current.scrollIntoView({
+        behavior: "smooth", // Makes the scroll animated
+        block: "start", // Aligns the element to the top of the viewport
+      });
+    }
+  };
 
   return (
     <>
-      <div className="relative top-24 w-[75%] sm:w-[80%] lg:w-[90.5%] left-1/2 transform -translate-x-1/2">
-        <div className="flex flex-col md:flex-row items-center justify-between  p-4 rounded-lg  w-full">
+      <div className="relative w-[75%] sm:w-[80%] lg:w-[90.5%] left-1/2 transform -translate-x-1/2">
+        {/* Vehicle Header */}
+        <div className="flex flex-col md:flex-row items-center justify-between p-4 rounded-lg w-full">
           {/* Left part - Driver Image and Name */}
           <div className="flex items-center w-full md:w-auto mb-4 md:mb-0">
             <img
-              src={vehicle.driverImage}
+              src={vehicle.profilePic || "/default-avatar.png"}
               alt="Driver"
-              className="w-20 h-20 rounded-full mr-4"
+              className="w-15 h-15 rounded-full mr-4 object-cover"
+              onError={(e) => {
+                e.target.src = "/avatar.png";
+              }}
             />
             <div>
-              <h2 className="text-sm md:text-3xl  font-bold text-black text-left">
+              <h2 className="text-sm md:text-2xl font-bold text-black text-left">
                 {vehicle.model}
-                <span className="ml-3 text-sm md:text-3xl">
-                  {vehicle.numberPlate}
+                <span className="ml-3 text-sm md:text-2xl">
+                  {vehicle.vehicleNo}
                 </span>
               </h2>
               <p className="text-sm text-gray-500 text-left">
@@ -57,122 +96,82 @@ const SpecificTaxi = () => {
             </div>
           </div>
 
-          {/* Middle part - Rating */}
-          <div className="flex items-end ml-auto self-end space-x-1 text-gray-600 text-sm w-full md:w-auto mb-2  p-0 md:p-2 md:mb-0 mr-2">
-            <span>{vehicle.rating}</span>
-            <span>⭐</span>
-            <span>(345 client reviews)</span>
-          </div>
-
           {/* Right part - Price and Button */}
           <div className="flex flex-col items-end w-full md:w-auto">
-            <div className="text-black font-bold text-xl md:text-3xl mb-2 md:mb-1 text-left md:text-right w-full md:w-auto md:p-3">
-              ${vehicle.feePerKm}/km
+            <div className="text-black font-bold text-sm md:text-2xl mb-2 md:mb-1 text-left md:text-right w-full md:w-auto md:p-3">
+              LKR {vehicle.perKm || "0"}/km
             </div>
-            <button className="bg-green-200 text-black px-4 py-2 w-full md:w-auto rounded-xl font-semibold hover:bg-green-300">
+            <button
+              onClick={handleHireNowClick}
+              className="bg-green-200 text-black px-4 py-2 w-full text-xs sm:text-sm md:w-auto rounded-xl font-semibold hover:bg-green-300 transition-colors"
+            >
               Hire Now
             </button>
           </div>
         </div>
+
+        {/* Vehicle Image */}
         <div className="w-full h-52 md:h-[400px]">
           <img
-            src={vehicle.image}
-            alt="vehicleImage"
-            className=" w-full h-full object-cover mt-3 rounded-xl md:rounded-3xl"
+            src={vehicle.images?.[0] || "/default-vehicle.png"}
+            alt="Vehicle"
+            className="w-full h-full object-cover mt-3 rounded-md md:rounded-md"
+            onError={(e) => {
+              e.target.src = "/default-vehicle.png";
+            }}
           />
         </div>
+
+        {/* Driver Bio */}
         <div className="pt-5">
-          <h1 className="h-auto text-gray-600 font-medium text-sm sm:text-sm md:text-lg text-left">
-            {vehicle.bio}
+          <h1 className="h-auto text-gray-600 font-medium text-xs sm:text-sm md:text-sm text-left">
+            {vehicle.driverBio || "No bio available"}
           </h1>
         </div>
 
-        <div className="grid lg:grid-cols-5 pt-20 gap-10 grid-cols-1">
-          {/* Left side */}
-          <div className="h-auto lg:h-[500px] w-auto lg:col-span-2 shadow-lg rounded-xl bg-white relative">
-            <h1 className="absolute -top-12 sm:-top-8 md:-top-8 lg:-top-14 text-xl text-gray-600 bg-transparent font-bold text-left ml-1">
-              About the Driver
-            </h1>
-
+        {/* About Driver & Facilities */}
+        <div className="pt-4 sm:pt-10">
+          {/* Left side - About Driver */}
+          <h1 className="text-sm sm:text-xl text-gray-600 bg-transparent font-bold text-center sm:text-left py-2">
+            About the Driver
+          </h1>
+          <div className="h-auto lg:h-auto w-full lg:col-span- shadow-lg rounded-xl bg-white relative">
             <div className="flex items-center p-4 md:p-8 lg:flex-row flex-col">
               <img
-                src={vehicle.driverImage}
-                className="h-16 w-16 md:h-20 md:w-20 rounded-full"
+                src={vehicle.profilePic || "/default-avatar.png"}
+                className="h-16 w-16 md:h-20 md:w-20 rounded-full object-cover"
                 alt="Driver"
+                onError={(e) => {
+                  e.target.src = "/default-avatar.png";
+                }}
               />
               <div className="text-left text-gray-600 font-bold ml-4">
-                <h1 className="text-base md:text-2xl">{vehicle.driverName}</h1>
-                <div className="flex items-center mt-1 flex-col md:flex-row">
-                  <MapPin className="w-4 md:w-5 text-gray-500 " />
-                  <h1 className="ml-1 text-gray-500 text-sm md:text-base">
-                    {vehicle.location}
+                <h1 className="text-base md:text-xl">{vehicle.driverName}</h1>
+                <div className="flex items-center  flex-col md:flex-row">
+                  <MapPin className="w-4 md:w-4 text-gray-500" />
+                  <h1 className="ml-1 text-gray-400 text-xs">
+                    {vehicle.city || "Location not specified"}
                   </h1>
                 </div>
               </div>
             </div>
             <div className="w-[90%] h-[1px] bg-gray-300 mx-auto"></div>
             <div className="md:py-8 py-4 h-auto">
-              <h1 className="text-left text-gray-500 text-sm sm:text-base font-medium mx-6">
+              <h1 className="text-left text-gray-500 text-sm sm:text-sm font-medium mx-6">
                 I'm {vehicle.driverName}!
               </h1>
-              <h1 className="text-left font-medium text-xs sm:text-base mx-6 text-gray-500 mt-4">
-                {vehicle.intro}
+              <h1 className="text-left font-medium text-xs sm:text-sm mx-6 text-gray-500 mt-4">
+                {vehicle.description || "No description available"}
               </h1>
             </div>
           </div>
 
-          {/* Right side */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start shrink-0 lg:col-span-3 gap-3 relative sm:justify-start mt-10 md:mt-0 ">
-            <h1 className="absolute -top-12 sm:-top-8 md:-top-8 lg:-top-14 text-xl text-gray-600 bg-transparent font-bold text-left ml-1">
-              Facilities
-            </h1>
-            <div className="flex flex-wrap gap-2 sm:gap-4 justify-center sm:justify-start">
-              {vehicle.features.map((feature, index) => (
-                <div
-                  key={index}
-                  className="bg-green-200 p-2  sm:p-4 rounded-lg border border-gray-200 items-center justify-center h-20 w-20 sm:h-48 sm:w-48 flex flex-shrink-0"
-                >
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-xs sm:text-2xl text-center">
-                      {feature.name}
-                    </h3>
-                    <p className="text-gray-600 text-xs sm:text-sm mt-1 hidden sm:block">
-                      {feature.caption}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Right side - Facilities */}
         </div>
-        <div className="pb-10">
+
+        {/* Start Journey */}
+        <div className="mb-30 " ref={startJourneyRef}>
           <StartJourney vehicle={vehicle} />
-        </div>
-
-        <div className="flex gap-6 items-center justify-start mt-12 overflow-x-auto scrollbar-hide w-auto ml-12 pb-12 pr-8">
-          {[].map((item, index) => (
-            <TestimonialCard
-              key={index}
-              user={item.user.name}
-              country={"England"}
-              text={item.comment}
-              rating={item.rating}
-              img={item.user.image}
-              star={asserts.star}
-            />
-          ))}
-        </div>
-
-        <div className="flex justify-center sm:justify-end items-center xl:mx-12 mx-4 mb-40 md:mb-40 lg:mb-40">
-          <button
-            onClick={() => {
-              toggleReviewOpen();
-              setReviewBelongsTo("platform");
-            }}
-            className="px-4 py-2 rounded-md border-2 border-green-300 cursor-pointer"
-          >
-            Add Review
-          </button>
         </div>
       </div>
     </>
