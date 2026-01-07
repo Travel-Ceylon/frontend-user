@@ -3,6 +3,7 @@ import DestinationFilter from "../../components/DestinationFilter";
 import { useLocation, useNavigate } from "react-router-dom";
 import FilterSidebar from "../../components/FilterSidebar";
 import { MapPin, Star, Users } from "lucide-react";
+import { api } from "../../config/api";
 
 const StaysFilter = () => {
   const navigate = useNavigate();
@@ -40,39 +41,26 @@ const StaysFilter = () => {
       setError(null);
 
       try {
-        const base = "http://localhost:5000/api/service/stays";
-        let url;
+        let response;
 
         // If both dates provided, use availability endpoint
         if (checkIn && checkOut) {
-          const params = new URLSearchParams({
+          const params = {
             location: destination,
             start_date: checkIn,
             end_date: checkOut,
             numberOfRooms: String(rooms),
             numberOfGuest: String(guests),
-          });
-          if (activeFilters.priceMin)
-            params.set("minPrice", activeFilters.priceMin);
-          if (activeFilters.priceMax)
-            params.set("maxPrice", activeFilters.priceMax);
-          url = `${base}/available?${params.toString()}`;
+          };
+          if (activeFilters.priceMin) params.minPrice = activeFilters.priceMin;
+          if (activeFilters.priceMax) params.maxPrice = activeFilters.priceMax;
+          response = await api.get("/api/service/stays/available", { params });
         } else {
           // Only location filter — simple list by location
-          url = `${base}?location=${encodeURIComponent(destination)}`;
+          response = await api.get("/api/service/stays", { params: { location: destination } });
         }
 
-        const res = await fetch(url, { method: "GET", credentials: "include" });
-
-        if (!res.ok) {
-          const err = await res
-            .json()
-            .catch(() => ({ message: "Failed to load" }));
-          throw new Error(err.message || "Failed to fetch");
-        }
-
-        const data = await res.json();
-        // backend might return { data: [...]} or array directly
+        const data = response.data;
         setResults(data.data || data.stays || data || []);
       } catch (err) {
         setError(err.message || "Network error");
@@ -85,9 +73,9 @@ const StaysFilter = () => {
     fetchAvailable();
   }, [destination, checkIn, checkOut, rooms, guests, activeFilters]);
 
-  const openStay = (stay) => {
-    navigate("/stays/specific-hotel", { state: { stayId: stay._id, stay } });
-  };
+  // const openStay = (stay) => {
+  //   navigate("/stays/specific-hotel", { state: { stayId: stay._id, stay } });
+  // };
 
   return (
     <div className="overflow-auto m-auto">
@@ -119,7 +107,7 @@ const StaysFilter = () => {
           {loading && (
             <div className="py-8 text-center">Loading available stays...</div>
           )}
-          {error && <div className="py-4 text-red-600">Error: {error}</div>}
+          {error && <div className="py-4 text-red-600">Try again</div>}
 
           <div className="grid sm:grid-cols-1 lg:grid-cols-2 gap-8 md:w-200">
             {results.map((item) => (
@@ -195,11 +183,14 @@ const StaysFilter = () => {
                   {/* Action Button */}
                   <div className="mt-5">
                     <button
-                      onClick={() =>
-                        navigate("/stays/specific-hotel", {
-                          state: { stay: item },
-                        })
-                      }
+                      onClick={() => {
+                        const id = item.stay?._id || item._id;
+                        if (id) {
+                          navigate(`/stays/specific-hotel/${id}`, { state: { stay: item } });
+                        } else {
+                          navigate("/stays/specific-hotel", { state: { stay: item } });
+                        }
+                      }}
                       className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg shadow"
                     >
                       View Details
