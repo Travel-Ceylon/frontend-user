@@ -9,7 +9,7 @@ const SpecificHotel = () => {
   const toggleReviewOpen = false;
   return (
     <div className="flex flex-col min-h-screen  ">
-      <div className=" w-[90vw] mx-auto py-6 flex-grow mt-25">
+      <div className=" w-[90vw] mx-auto py-6 grow mt-25">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <div>

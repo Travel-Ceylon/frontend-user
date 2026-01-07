@@ -20,6 +20,7 @@ import Navbar from "./components/Navbar";
 import LoadingScreen from "./components/LoadingScreen";
 import { Toaster } from "react-hot-toast";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SpecificHotel from "./pages/stays/SpecificHotel";
 
 function App() {
   const { loadUser, isAuthChecking } = useAuthStore();
@@ -52,6 +53,7 @@ function App() {
         <Route path="/stays" element={<Stays />} />
         <Route path="/stays/filter" element={<StaysFilter />} />
         <Route path="/stays/:id" element={<StaysFilter />} />
+        <Route path="/stays/specific-hotel/:hotelId" element={<SpecificHotel />} />
 
         <Route path="/guides" element={<Guides />} />
         <Route path="/guides/search" element={<GuideSearchResults />} />
